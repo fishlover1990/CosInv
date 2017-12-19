@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="img-no-display">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Cosmetics Inventory System</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta name="viewport" content="width=device-width,minimum-scale=1.0,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+</head>
+<script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.2.1.min.js"></script>
+<body onload="onLoadScript()">
+<div class="content">
+
+	<div class="site-header">Tidy Beauty</div>
+	<div class="main-content">
+		<div class="area_section">
+			<div class="action-choice double-row"><a href="index.html"><img class="picture-as-button" src="icons/book.png" alt="Check Inventory">  Home</a></div>
+			<div class="action-choice double-row"><a href="purchase.html"><img class="picture-as-button" src="icons/shopping.png" alt="New Purchase">  Purchase</a></div>
+		</div>
+		<div class="area_section">
+			<div class="action-choice double-row"><a href="preference.html"><img class="picture-as-button" src="icons/setting.png" alt="Setting">  Setting</a></div>
+			<div class="action-choice double-row"><a href="https://api.whatsapp.com/send?phone=+85263523024"><img class="picture-as-button" src="icons/email-logo.png" alt="Support">  Contact Us</a></div>
+		</div>
+		
+		
+		
+		<div id="login_area" class="area_section">
+			<form method="post" id="login_form">
+				<div class="single-row">
+					<div class="login_input_field">
+						<label><b>Username</b></label>
+						<input type="text" placeholder="Enter Username" name="loginusername" autocomplete="off">
+					</div>
+				</div>
+				<div class="single-row">
+					<div class="login_input_field">
+						<label><b>Password</b></label>
+						<input type="password" placeholder="Enter Password" name="loginpassword" autocomplete="off">
+					</div>
+				</div>
+				<div class="single-row">
+					<div class="button-section">
+						<button type="button" class="submit_button" onclick="login()">Login</button>
+					</div>
+				</div>
+			  
+
+			</form>
+		</div>
+		
+		<div id="logout_area" class="page_title"></div>
+		
+		
+		<div id="inv_table" class="area_section"></div>
+		<div id="reset_consume_button" class="area_section">
+			<div class="single-row">
+				<div class="button-section">
+					<button type="button" onclick="reset_consume_button()" class="reset_button">Reset Today's Consumption</button>
+				</div>
+			</div>
+		</div>
+		<div id="reset_purchase_button" class="area_section">
+			<div class="single-row">
+				<div class="button-section">
+					<button type="button" onclick="reset_purchase_button()" class="reset_button">Undo Last Purchase Record</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+</body>
+
+
+
+
+<script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.2.1.min.js"></script>
+<script src="/EasyAutocomplete-1.3.5/jquery.easy-autocomplete.min.js"></script> 
+<link rel="stylesheet" href="/EasyAutocomplete-1.3.5/easy-autocomplete.min.css"> 
+<link rel="stylesheet" href="/EasyAutocomplete-1.3.5/easy-autocomplete.themes.min.css"> 
+
+
+<script>
+function getCookie(name) {
+    var dc = document.cookie;
+    var prefix = name + "=";
+    var begin = dc.indexOf("; " + prefix);
+    if (begin == -1) {
+        begin = dc.indexOf(prefix);
+        if (begin != 0) return null;
+		end = document.cookie.indexOf(";", begin);
+    }
+    else
+    {
+        begin += 2;
+        var end = document.cookie.indexOf(";", begin);
+        if (end == -1) {
+        end = dc.length;
+        }
+    }
+    // because unescape has been deprecated, replaced with decodeURI
+    //return unescape(dc.substring(begin + prefix.length, end));
+    return decodeURI(dc.substring(begin + prefix.length, end));
+} 
+
+function onLoadScript() {
+	//check cookie
+	var session_cookie = getCookie("session");
+	if (session_cookie != null && session_cookie != "" ) {
+		//there is a session cookie
+
+		var logout_inner = "<p>Welcome, " + getCookie("user_name") + ".      <button type=\"button\" onclick=\"logout()\">Logout</button></p><h1>Your Inventory List:</h1>"
+		document.getElementById("logout_area").innerHTML = logout_inner;
+		$("#inv_table").show();
+		$("#reset_consume_button").show();
+		$("#reset_purchase_button").show();	
+		$("#login_area").hide();
+		$("#logout_area").show()
+
+	}
+	else {
+		//no session cookie found
+		
+		$("#inv_table").hide();
+		$("#reset_consume_button").hide();
+		$("#reset_purchase_button").hide();	
+		$("#login_area").show();
+		$("#logout_area").hide();
+	}
+
+	load_inventory_table(getCookie("user_id"));	
+}
+
+function load_inventory_table(user) {
+	//Display the Inventory Table
+    var obj, dbParam, xmlhttp, myObj, x, txt = "", consumed, bal;
+    obj = {"user":user};
+    dbParam = JSON.stringify(obj);
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			myObj = JSON.parse(this.responseText);
+			txt = "<table border='1'>";
+			txt += "<tr>";
+			txt += "<td>Category</td>";
+			txt += "<td>Brand</td>";
+			txt += "<td>Name</td>";
+			txt += "<td>Vol/Qty</td>";
+			//txt += "<td>Unit</td>";
+			//txt += "<td>Purchase Quantity</td>";
+			//txt += "<td>Consume Quantity</td>";
+			txt += "<td>Balance</td>";
+			txt += "</tr>";
+			var row = 0;
+			for (x in myObj) {
+				if (myObj[x].Total_Consumed == null) consumed = 0; else consumed = myObj[x].Total_Consumed;
+				if (myObj[x].Cat_Divisible==0) bal = myObj[x].Purchase_Qty - consumed;
+				else bal = myObj[x].Prod_QV*myObj[x].Purchase_Qty - consumed;
+				if (bal>0) {
+					txt += "<tr id=\""+row+"\">";
+					txt += "<td>" + myObj[x].Cat_Name + "</td>";
+					txt += "<td>" + myObj[x].Brand_Name+ "</td>";
+					txt += "<td>" + myObj[x].Prod_Name + "</td>";
+					txt += "<td>" + myObj[x].Prod_QV + myObj[x].Cat_Unit + "</td>";
+					//txt += "<td>" + myObj[x].Cat_Unit + "</td>";
+					//txt += "<td>" + myObj[x].Purchase_Qty + "</td>";
+					//txt += "<td>" + myObj[x].Total_Consumed + "</td>";
+
+					if (myObj[x].Total_Consumed == null) consumed = 0; else consumed = myObj[x].Total_Consumed;
+					if (myObj[x].Cat_Divisible==0) bal = myObj[x].Purchase_Qty - consumed;
+					else bal = myObj[x].Prod_QV*myObj[x].Purchase_Qty - consumed;
+					txt += "<td>" + bal + "<button type=\"button\" onclick=\"consume_one('"+myObj[x].Purchase_id+"','"+row+"',"+bal+")\">Use</button></td>";
+					txt += "</tr>";
+					row = row + 1;
+				}
+			 }
+			txt += "</table>";
+		 document.getElementById("inv_table").innerHTML = txt;
+		}
+	}
+	xmlhttp.open("POST", "Check_Inventory.php", true);
+	xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xmlhttp.send("x=" + dbParam);	
+	$("body").fadeIn(1000);
+}
+
+function consume_one(pid,row,bal) {
+	var date = new Date();
+	var day = date.getDate();
+	var month = date.getMonth() + 1;
+	var year = date.getFullYear();
+	if (month < 10) month = "0" + month;
+	if (day < 10) day = "0" + day;
+	var today = year + "-" + month + "-" + day;
+
+  var obj, dbParam, xmlhttp, myObj, x, txt = "";
+  obj = { "user":"denise", "pid":pid, "cdate":today};
+  dbParam = JSON.stringify(obj);
+  xmlhttp = new XMLHttpRequest();
+  xmlhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+		if (bal == 1) {
+			$("#"+row).fadeTo("slow",0.1);
+			setTimeout(onLoadScript,900);
+		}
+		else {
+			onLoadScript();
+		}
+    }
+  };
+  xmlhttp.open("POST", "consume_one.php", true);
+  xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xmlhttp.send("x=" + dbParam);	
+
+}
+
+function reset_consume_button() {
+	var r = confirm("You are going to undo all the cosumption action today. Are you sure?");
+	if (r==true) {
+		var obj, dbParam, xmlhttp, myObj, x, txt = "";
+		var date = new Date();
+		var day = date.getDate();
+		var month = date.getMonth() + 1;
+		var year = date.getFullYear();
+		var today = year + "-" + month + "-" + day; 
+		obj = { "user":"denise", "today":today};
+		dbParam = JSON.stringify(obj);
+		xmlhttp = new XMLHttpRequest();
+		xmlhttp.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				onLoadScript();
+			}
+		};
+		xmlhttp.open("POST", "reset_consumption.php", true);
+		xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		xmlhttp.send("x=" + dbParam);
+	}
+}
+
+function reset_purchase_button() {
+
+	var r = confirm("You are going to Delete the last input purchase record. Are you sure?");
+	if (r==true) {
+		var obj, dbParam, xmlhttp, myObj, x, txt = "";
+
+		obj = { "user":"denise"};
+		dbParam = JSON.stringify(obj);
+		xmlhttp = new XMLHttpRequest();
+		xmlhttp.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				onLoadScript();
+			}
+		};
+		xmlhttp.open("POST", "reset_purchase.php", true);
+		xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		xmlhttp.send("x=" + dbParam);
+	}
+}
+
+function login() {
+	var obj, dbParam, xmlhttp, myObj, x, txt = "";
+	obj = { "username":document.getElementsByName("loginusername")[0].value, "password":document.getElementsByName("loginpassword")[0].value};
+	dbParam = JSON.stringify(obj);
+	xmlhttp = new XMLHttpRequest();
+	xmlhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			try {
+				myObj = JSON.parse(this.responseText);
+				var user_id = myObj["user_id"];
+				var user_name = myObj["user_name"];
+				var session = myObj["session"];
+				var expire = myObj["expire"];
+				//alert(user_id+" "+user_name+" "+myObj["expire"]+myObj["session"]);
+			}
+			catch(err) {
+				alert("Login Failed.");
+				return;
+			}
+			expire = new Date();
+			expire.setMinutes(expire.getMinutes()+1);
+			document.cookie = "session="+session+"; expires="+expire;
+			document.cookie = "user_id="+user_id+"; expires="+expire;
+			document.cookie = "user_name="+user_name+"; expires="+expire;
+			document.cookie = "path=/"+"; expires="+expire;
+			onLoadScript();
+		}
+	}
+
+	xmlhttp.open("POST", "login.php", true);
+	xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xmlhttp.send("x=" + dbParam);	
+	
+
+}
+
+function logout() {
+	var cookies = document.cookie.split(";");
+	for (var i = 0; i < cookies.length; i++) {
+		coo = cookies[i].split("=")[0];
+		document.cookie = coo+"=; expires="+ new Date();
+	}
+	
+	$("#login_area").toggle();
+	$("#logout_area").toggle();
+	onLoadScript();
+		
+	  
+}
+
+
+
+</script>
+
+</html>
+
+
+
+
